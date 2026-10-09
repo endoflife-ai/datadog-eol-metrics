@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created_at": null,
+  "last_updated_at": null,
+  "title": "[endoflife.ai] KEV-Exposed Product at Elevated EOL Risk",
+  "description": "Alerts when a product carrying active CISA Known Exploited Vulnerabilities exposure reaches an EOL Risk Score of 60 or more. Exploited plus end-of-life means the fix for the next CVE never arrives — the most urgent combination this integration tracks. Powered by endoflife.ai — https://endoflife.ai/exploited-and-unpatchable",
+  "definition": {
+    "name": "[endoflife.ai] KEV-exposed product at elevated risk: {{product.name}}",
+    "type": "query alert",
+    "query": "max(last_1d):max:endoflife.risk_score{kev_active:true} by {product} >= 60",
+    "message": "{{#is_alert}}\n**{{product.name}} carries active CISA KEV exposure and an EOL Risk Score of {{value}}/100.**\n\nThis product line has confirmed actively-exploited vulnerabilities in its history and is at or past end of life — new exploited CVEs against the EOL versions will never receive a vendor patch.\n\n- Verified exploited-and-unpatchable entries: https://endoflife.ai/exploited-and-unpatchable\n- Product lifecycle detail: https://endoflife.ai/{{product.name}}\n- What to do: treat as a priority migration; until then apply compensating controls (segmentation, monitoring, restricted access).\n{{/is_alert}}\n\n{{#is_recovery}}\n{{product.name}} has dropped below the elevated-risk threshold.\n{{/is_recovery}}\n\nMethodology: https://endoflife.ai/risk-score",
+    "tags": ["source:endoflife.ai", "integration:endoflife"],
+    "options": {
+      "thresholds": { "critical": 60 },
+      "notify_audit": false,
+      "include_tags": true,
+      "new_group_delay": 60,
+      "notify_no_data": false,
+      "renotify_interval": 0,
+      "evaluation_delay": 900
+    },
+    "priority": 1
+  },
+  "tags": ["integration:endoflife"]
+}

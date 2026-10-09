@@ -1,0 +1,829 @@
+{
+  "title": "EOL Risk Overview",
+  "description": "Software end-of-life risk for your environment, powered by endoflife.ai (0-100 EOL Risk Scores, vendor-verified dates). Catalog-wide risk plus stack-scan metrics scoped to your detected hosts. Learn more: https://endoflife.ai",
+  "widgets": [
+    {
+      "definition": {
+        "title": "About endoflife.ai",
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "definition": {
+              "type": "note",
+              "content": "## endoflife.ai \u2014 EOL Risk Overview\n\n**Risk Score (0\u2013100)**: EOL recency + attack surface + CISA KEV exposure + extended-support availability. Higher = more dangerous to keep running. Grades: A (low) to F (critical).\n\n**Two lenses:** catalog metrics (`endoflife.risk_score`, `endoflife.days_until_eol`) cover the full tracked catalog; **stack-scan metrics** (`endoflife.stack_risk_score`) are scoped to hosts detected in *your* Datadog account, tagged by `host_name`. `eol_phase` splits products **approaching** EOL (plan the upgrade) from **past** EOL (remediate \u2014 no patches are coming).\n\nDates verified against vendor documentation \u2014 methodology: https://endoflife.ai/accuracy",
+              "background_color": "yellow",
+              "font_size": "14",
+              "text_align": "left",
+              "vertical_align": "center",
+              "show_tick": false,
+              "tick_pos": "50%",
+              "tick_edge": "left",
+              "has_padding": true
+            },
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Overview",
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "definition": {
+              "title": "Past EOL + actively exploited (CISA KEV)",
+              "type": "query_value",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "min:endoflife.days_until_eol{kev_active:true,$product,$eol_phase,$grade} by {product}",
+                      "aggregator": "last"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "count_nonzero(clamp_max(query1, -1))"
+                    }
+                  ]
+                }
+              ],
+              "autoscale": true,
+              "precision": 0,
+              "custom_links": [],
+              "timeseries_background": {
+                "type": "area"
+              }
+            },
+            "layout": {
+              "x": 0,
+              "y": 2,
+              "width": 3,
+              "height": 2
+            }
+          },
+          {
+            "definition": {
+              "title": "Average EOL Risk Score",
+              "title_size": "16",
+              "title_align": "left",
+              "description": "Current average across the full catalog of 500+ monitored products.",
+              "type": "query_value",
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "avg:endoflife.risk_score{*}",
+                      "aggregator": "avg"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "autoscale": false,
+              "precision": 2,
+              "custom_unit": "",
+              "conditional_formats": [
+                {
+                  "comparator": "<",
+                  "value": 40,
+                  "palette": "white_on_green"
+                },
+                {
+                  "comparator": "<",
+                  "value": 60,
+                  "palette": "white_on_yellow"
+                },
+                {
+                  "comparator": ">=",
+                  "value": 60,
+                  "palette": "white_on_red"
+                }
+              ],
+              "timeseries_background": {
+                "type": "area"
+              }
+            },
+            "layout": {
+              "x": 3,
+              "y": 2,
+              "width": 3,
+              "height": 2
+            }
+          },
+          {
+            "definition": {
+              "title": "Nearest upcoming EOL deadline (days)",
+              "title_size": "16",
+              "title_align": "left",
+              "type": "query_value",
+              "precision": 0,
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "min:endoflife.days_until_eol{eol_phase:approaching,$product,$grade}",
+                      "aggregator": "last"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "conditional_formats": [
+                    {
+                      "comparator": "<=",
+                      "value": 30,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": "<=",
+                      "value": 90,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": ">",
+                      "value": 90,
+                      "palette": "white_on_green"
+                    }
+                  ]
+                }
+              ],
+              "timeseries_background": {
+                "type": "area"
+              }
+            },
+            "layout": {
+              "x": 6,
+              "y": 2,
+              "width": 3,
+              "height": 2
+            }
+          },
+          {
+            "definition": {
+              "title": "Hosts running at-risk software (stack scan)",
+              "type": "query_value",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "max:endoflife.stack_risk_score{*} by {host_name}",
+                      "aggregator": "last"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "count_nonzero(query1)"
+                    }
+                  ]
+                }
+              ],
+              "autoscale": true,
+              "precision": 0,
+              "timeseries_background": {
+                "type": "area"
+              }
+            },
+            "layout": {
+              "x": 9,
+              "y": 2,
+              "width": 3,
+              "height": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Stack Scan \u2014 Your Hosts",
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "definition": {
+              "title": "Your riskiest hosts (stack scan)",
+              "type": "toplist",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "max:endoflife.stack_risk_score{*} by {host_name,product}",
+                      "aggregator": "last"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "query1",
+                      "limit": {
+                        "count": 15,
+                        "order": "desc"
+                      }
+                    }
+                  ],
+                  "sort": {
+                    "count": 25,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "custom_links": [
+                {
+                  "label": "View {{product.value}} on endoflife.ai",
+                  "link": "https://endoflife.ai/{{product.value}}"
+                },
+                {
+                  "label": "Full risk-score methodology",
+                  "link": "https://endoflife.ai/risk-score"
+                }
+              ]
+            },
+            "layout": {
+              "x": 0,
+              "y": 4,
+              "width": 6,
+              "height": 3
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Lifecycle Deadlines \u2014 Approaching vs Past",
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "definition": {
+              "title": "Approaching EOL \u2014 days remaining",
+              "type": "toplist",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "min:endoflife.days_until_eol{eol_phase:approaching,$product,$grade} by {product}",
+                      "aggregator": "last"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "query1",
+                      "limit": {
+                        "count": 15,
+                        "order": "asc"
+                      }
+                    }
+                  ],
+                  "sort": {
+                    "count": 25,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "asc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "custom_links": [
+                {
+                  "label": "View {{product.value}} on endoflife.ai",
+                  "link": "https://endoflife.ai/{{product.value}}"
+                },
+                {
+                  "label": "Full risk-score methodology",
+                  "link": "https://endoflife.ai/risk-score"
+                }
+              ]
+            },
+            "layout": {
+              "x": 6,
+              "y": 4,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "definition": {
+              "title": "Past EOL \u2014 days overdue",
+              "type": "toplist",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "min:endoflife.days_until_eol{eol_phase:past,$product,$grade} by {product}",
+                      "aggregator": "last"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "abs(query1)",
+                      "limit": {
+                        "count": 15,
+                        "order": "desc"
+                      }
+                    }
+                  ],
+                  "sort": {
+                    "count": 25,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "custom_links": [
+                {
+                  "label": "View {{product.value}} on endoflife.ai",
+                  "link": "https://endoflife.ai/{{product.value}}"
+                },
+                {
+                  "label": "Full risk-score methodology",
+                  "link": "https://endoflife.ai/risk-score"
+                }
+              ]
+            },
+            "layout": {
+              "x": 9,
+              "y": 4,
+              "width": 3,
+              "height": 3
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Catalog Risk Breakdown",
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "definition": {
+              "title": "Products by Risk Grade",
+              "title_size": "16",
+              "title_align": "left",
+              "description": "Share of monitored products by risk band \u2014 the widest wedges are where remediation effort concentrates.",
+              "requests": [
+                {
+                  "response_format": "scalar",
+                  "queries": [
+                    {
+                      "query": "count:endoflife.risk_score{*} by {grade}",
+                      "data_source": "metrics",
+                      "name": "query1",
+                      "aggregator": "max"
+                    }
+                  ],
+                  "style": {
+                    "palette": "datadog16"
+                  },
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "sort": {
+                    "count": 500,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "type": "sunburst",
+              "legend": {
+                "type": "automatic"
+              }
+            },
+            "layout": {
+              "x": 0,
+              "y": 7,
+              "width": 4,
+              "height": 4
+            }
+          },
+          {
+            "definition": {
+              "title": "Critical Risk Products (Grade F)",
+              "title_size": "16",
+              "title_align": "left",
+              "description": "Products with critical EOL risk requiring immediate action!",
+              "type": "toplist",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "query1",
+                      "query": "max:endoflife.risk_score{grade:f} by {product}",
+                      "aggregator": "avg"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "sort": {
+                    "count": 10,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "style": {
+                "display": {
+                  "type": "stacked",
+                  "legend": "automatic"
+                }
+              }
+            },
+            "layout": {
+              "x": 4,
+              "y": 7,
+              "width": 4,
+              "height": 2
+            }
+          },
+          {
+            "definition": {
+              "title": "Products by lifecycle phase",
+              "title_size": "16",
+              "title_align": "left",
+              "description": "How many tracked products are approaching EOL vs already past it.",
+              "type": "bar_chart",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "query1",
+                      "query": "count:endoflife.risk_score{*} by {eol_phase}",
+                      "aggregator": "max"
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "sort": {
+                    "count": 10,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  },
+                  "response_format": "scalar"
+                }
+              ],
+              "style": {
+                "display": {
+                  "type": "stacked",
+                  "legend": "automatic"
+                }
+              }
+            },
+            "layout": {
+              "x": 8,
+              "y": 7,
+              "width": 4,
+              "height": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "CISA KEV Exposure",
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "definition": {
+              "title": "Active CISA KEV + Critical Products",
+              "title_size": "16",
+              "title_align": "left",
+              "type": "toplist",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "query1",
+                      "query": "avg:endoflife.risk_score{kev_active:true} by {product}",
+                      "aggregator": "avg"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "sort": {
+                    "count": 25,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "style": {
+                "display": {
+                  "type": "stacked",
+                  "legend": "automatic"
+                }
+              }
+            },
+            "layout": {
+              "x": 4,
+              "y": 9,
+              "width": 4,
+              "height": 2
+            }
+          },
+          {
+            "definition": {
+              "title": "Critical/KEV Risk Score Trend (30d)",
+              "title_size": "16",
+              "title_align": "left",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "legend_columns": [
+                "avg",
+                "min",
+                "max",
+                "value"
+              ],
+              "type": "timeseries",
+              "requests": [
+                {
+                  "response_format": "timeseries",
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "avg:endoflife.risk_score{kev_active:true} by {product}"
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "top(query1, 8, 'mean', 'desc')"
+                    }
+                  ],
+                  "style": {
+                    "palette": "dog_classic",
+                    "order_by": "values",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  },
+                  "display_type": "line"
+                }
+              ]
+            },
+            "layout": {
+              "x": 8,
+              "y": 9,
+              "width": 4,
+              "height": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Product Detail & Trends",
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "definition": {
+              "title": "EOL Risk by product \u2014 score, grade, KEV, phase",
+              "type": "query_table",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "name": "score",
+                      "data_source": "metrics",
+                      "query": "max:endoflife.risk_score{$product,$eol_phase,$grade} by {product,eol_date,grade,kev_active,eol_phase}",
+                      "aggregator": "max"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "formulas": [
+                    {
+                      "formula": "score",
+                      "conditional_formats": [
+                        {
+                          "comparator": ">=",
+                          "value": 80,
+                          "palette": "white_on_red"
+                        },
+                        {
+                          "comparator": ">=",
+                          "value": 60,
+                          "palette": "white_on_yellow"
+                        },
+                        {
+                          "comparator": "<",
+                          "value": 60,
+                          "palette": "white_on_green"
+                        }
+                      ]
+                    }
+                  ],
+                  "sort": {
+                    "count": 100,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "custom_links": [
+                {
+                  "label": "View {{product.value}} on endoflife.ai",
+                  "link": "https://endoflife.ai/{{product.value}}"
+                },
+                {
+                  "label": "Full risk-score methodology",
+                  "link": "https://endoflife.ai/risk-score"
+                }
+              ]
+            },
+            "layout": {
+              "x": 0,
+              "y": 11,
+              "width": 12,
+              "height": 4
+            }
+          },
+          {
+            "definition": {
+              "title": "Risk posture trend (30d) \u2014 average score and past-EOL count",
+              "title_size": "16",
+              "title_align": "left",
+              "show_legend": true,
+              "legend_layout": "horizontal",
+              "type": "timeseries",
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "alias": "Average EOL Risk Score",
+                      "formula": "query1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "avg:endoflife.risk_score{$product,$eol_phase,$grade}"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "palette": "orange",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  },
+                  "display_type": "line"
+                },
+                {
+                  "formulas": [
+                    {
+                      "alias": "Products past EOL",
+                      "formula": "count_nonzero(query2)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "name": "query2",
+                      "data_source": "metrics",
+                      "query": "avg:endoflife.risk_score{eol_phase:past,$product,$grade} by {product}"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "palette": "warm",
+                    "line_type": "dashed",
+                    "line_width": "normal"
+                  },
+                  "display_type": "line",
+                  "on_right_yaxis": true
+                }
+              ],
+              "time": {
+                "live_span": "30d"
+              }
+            },
+            "layout": {
+              "x": 0,
+              "y": 15,
+              "width": 12,
+              "height": 3
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "template_variables": [
+    {
+      "name": "product",
+      "prefix": "product",
+      "available_values": [],
+      "default": "*"
+    },
+    {
+      "name": "eol_phase",
+      "prefix": "eol_phase",
+      "available_values": [],
+      "default": "*"
+    },
+    {
+      "name": "grade",
+      "prefix": "grade",
+      "available_values": [],
+      "default": "*"
+    }
+  ],
+  "layout_type": "ordered",
+  "notify_list": [],
+  "pause_auto_refresh": false,
+  "reflow_type": "fixed"
+}
