@@ -9,7 +9,7 @@ The integration tile is in the Datadog Integrations catalog (in Datadog:
 tile's setup steps point to, plus the dashboard and monitor templates.
 Questions: partners@endoflife.ai.
 
-Data: [endoflife.ai](https://endoflife.ai) - end-of-life dates for 500+
+Data: [endoflife.ai](https://endoflife.ai) - end-of-life dates for 600+
 products, with the [EOL Risk Score](https://endoflife.ai/risk-score) (0-100)
 on every version. Every date names its source: for the products endoflife.ai
 verifies directly it is the vendor's own lifecycle page, for the rest it is the
@@ -20,7 +20,7 @@ open endoflife.date dataset, and the API says which.
 | Metric | Type | Meaning |
 | --- | --- | --- |
 | `endoflife.risk_score` | gauge, 0-100 | EOL Risk Score; higher means more dangerous to keep running |
-| `endoflife.days_until_eol` | gauge, days | Days until the product's end-of-life date (negative once it has passed) |
+| `endoflife.days_until_eol` | gauge, days | Days until the product's next scheduled end of life (`nextEolDate`); when no line has one scheduled, days since the most recent one (negative) |
 | `endoflife.kev_factor_score` | gauge, 0-20 | The CISA Known Exploited Vulnerabilities component of the score, in isolation |
 | `endoflife.stack_risk_score` | gauge, 0-100 | Optional: the score scoped to software detected on hosts in your own Datadog account (`dd_stack_scan.py`) |
 
