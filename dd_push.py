@@ -80,7 +80,11 @@ def build_series(scores):
         factors = data.get("factors", {}) or {}
         kev_score = factors.get("kev", 0) or 0
         kev_active = "true" if kev_score > 0 else "false"
-        eol_date = data.get("eolDate")
+        # nextEolDate (scores.json since 2026-10-18) is the next scheduled end of life among the
+        # lines still supported. eolDate is the risk score basis: once any line has ended it is
+        # that PAST date, so PostgreSQL was tagged past while 14 ends 2026-11-12 and the 30-day
+        # approaching monitor could never fire. Fall back to eolDate where no line is scheduled.
+        eol_date = data.get("nextEolDate") or data.get("eolDate")
         dte = days_until(eol_date)
 
         # approaching = EOL date in the future; past = already EOL'd.
