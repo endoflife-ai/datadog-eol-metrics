@@ -19,8 +19,8 @@ Which products are sent (the scope):
   Both may be set; the scope is the union. Every product in the scope is
   tagged detected:true, and the recommended monitors alert only on those.
   - EOL_FULL_CATALOG=1 (opt-in): also send every product endoflife.ai tracks
-    (about 700 today, about 2,050 series per run), tagged detected:false
-    unless detected or listed. Use it as a reference table; it can count
+    (about 700 today, about 1,550 series per run), tagged detected:false
+    unless detected or listed. Use it as a reference table; it may count
     toward your Datadog custom metrics (see the README).
   With none of these set the exporter sends nothing and says how to set a scope.
 
@@ -38,7 +38,7 @@ Metrics pushed, one series per product in scope (per product and version for
 listed versions):
   endoflife.risk_score        (0-100) composite score
   endoflife.days_until_eol    days to the next scheduled end of life (negative once past)
-  endoflife.kev_factor_score  (0-20) the CISA KEV component in isolation
+  endoflife.kev_factor_score  (0-20) the CISA KEV component in isolation, only for KEV-active products
 Tags: product, grade, eol_phase, kev_active, detected, source (and version for
 listed versions).
 """
@@ -69,7 +69,7 @@ EOL_FULL_CATALOG = os.environ.get("EOL_FULL_CATALOG", "").strip().lower() in ("1
 # and distinct client addresses per day, from its CDN analytics). Nothing else
 # is sent to endoflife.ai: no install ID, no hostnames, no Datadog keys, no
 # customer data. The Datadog API key is only ever sent to Datadog.
-EXPORTER_VERSION = "1.3.0"
+EXPORTER_VERSION = "1.3.1"
 USER_AGENT = f"endoflife-datadog-exporter/{EXPORTER_VERSION} (+https://endoflife.ai/integrations)"
 # endoflife.ai's own sandbox job sets EOL_EXPORTER_INTERNAL=1 so its daily run
 # is counted apart from customer installations.
@@ -252,13 +252,16 @@ def build_series(scores, entries, versions_db):
                 "resources": resources
             })
 
-        series.append({
-            "metric": "endoflife.kev_factor_score",
-            "type": 0,
-            "points": [{"timestamp": now, "value": float(kev_score)}],
-            "tags": base_tags,
-            "resources": resources
-        })
+        # Only for products with an active CISA KEV entry (1.3.1): the value is zero everywhere
+        # else, so a zero series added nothing but a billable series per product.
+        if kev_score > 0:
+            series.append({
+                "metric": "endoflife.kev_factor_score",
+                "type": 0,
+                "points": [{"timestamp": now, "value": float(kev_score)}],
+                "tags": base_tags,
+                "resources": resources
+            })
 
     return series
 
@@ -293,7 +296,7 @@ def print_no_scope():
     print("Tell it which software you run, in one or both of these ways:")
     print('    setx DD_APP_KEY "your-datadog-application-key"   (detect products on your Datadog hosts)')
     print('    setx EOL_PRODUCTS "postgresql:14,nodejs:20,nginx"  (list endoflife.ai slugs, optional :version)')
-    print("To send every product endoflife.ai tracks (about 2,050 series per run), set EOL_FULL_CATALOG=1.")
+    print("To send every product endoflife.ai tracks (about 1,550 series per run), set EOL_FULL_CATALOG=1.")
 
 
 def main():

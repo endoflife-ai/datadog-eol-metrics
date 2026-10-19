@@ -21,7 +21,7 @@ endoflife.date dataset, and the API says which.
 | --- | --- | --- |
 | `endoflife.risk_score` | gauge, 0-100 | EOL Risk Score; higher means more dangerous to keep running |
 | `endoflife.days_until_eol` | gauge, days | Days until the product's next scheduled end of life (`nextEolDate`); when no line has one scheduled, days since the most recent one (negative). For a version you list, the date of that release line |
-| `endoflife.kev_factor_score` | gauge, 0-20 | The CISA Known Exploited Vulnerabilities component of the score, in isolation |
+| `endoflife.kev_factor_score` | gauge, 0-20 | The CISA Known Exploited Vulnerabilities component of the score, in isolation, sent only for products with an active KEV entry |
 | `endoflife.stack_risk_score` | gauge, 0-100 | The score per host for software detected on that host (`dd_stack_scan.py`) |
 
 Tags on the three product metrics: `product` (endoflife.ai slug), `grade`
@@ -91,7 +91,7 @@ and prints how to set a scope.
 
 `EOL_FULL_CATALOG=1` also sends every product endoflife.ai tracks, as a
 reference table, tagged `detected:false` unless detected or listed. That is
-about 2,050 series per run today (see below). The monitors ignore those
+about 1,550 series per run today (see below). The monitors ignore those
 products.
 
 ### Trying it without real hosts
@@ -108,26 +108,46 @@ A Datadog series is one metric name with one combination of tag values.
 
 | Setup | Series per run |
 | --- | --- |
-| Default (detected or listed products) | 3 per product, 2 if it has no dated end of life; a product listed with two versions counts twice |
+| Default (detected or listed products) | per product: 1 risk score, 1 days-until-EOL if it has a dated end of life, 1 KEV factor only if it has an active CISA KEV entry (1 to 3); a product listed with two versions counts twice |
 | Stack scan | 1 per host and detected product |
-| `EOL_FULL_CATALOG=1` | about 2,050 today (about 700 products x 2, plus about 660 dated products), growing with the catalog |
+| `EOL_FULL_CATALOG=1` | about 1,550 today (about 700 risk scores, 660 days-until-EOL, 180 KEV factors), growing with the catalog |
 
-Example: the three sample hosts match 9 products, so 27 product series plus
-10 host series. Before 1.3.0 every installation sent the whole catalog, about
-2,050 series per run, whether or not it ran those products.
+endoflife.ai's own Datadog sandbox runs three sample hosts with 9 products
+between them. Before: series counted there over 24 hours on 2026-10-19. After:
+what 1.3.1 sends for the same hosts (`python dd_push.py --sample --dry-run`
+plus the stack scan).
 
-Whether these count as custom metrics: Datadog's documentation says
-*"Metrics reported from accepted integrations are not counted as custom
-metrics, and therefore don't impact your custom metric allocation.
-(Integrations that emit potentially unlimited metrics may still be considered
-custom.)"* ([docs.datadoghq.com/extend](https://docs.datadoghq.com/extend/))
-and *"If a metric is not submitted from one of the more than 1,000 Datadog
-integrations it's considered a custom metric."*
+| | Before (1.2.x) | After (1.3.1) |
+| --- | --- | --- |
+| `endoflife.risk_score` | 698 | 9 |
+| `endoflife.days_until_eol` | 656 | 9 |
+| `endoflife.kev_factor_score` | 698 | 4 |
+| `endoflife.stack_risk_score` | 10 | 10 |
+| Total | about 2,062 | 32 |
+
+Before 1.3.0 every installation sent the whole catalog whether or not it ran
+those products. `product` is the only tag that adds series; the others have
+one value per product, but a change in any of them starts a new series, and
+both can count during the hour of the change.
+
+Whether these count as custom metrics: Datadog's documentation lists, among
+custom metrics, *"Metrics submitted by Marketplace integrations"* and
+*"Metrics submitted from an integration that is not one of the more than
+1,000 Datadog integrations"*
+([custom metrics](https://docs.datadoghq.com/metrics/custom_metrics/)), and
+says *"A custom metric is uniquely identified by a combination of a metric
+name and tag values (including the host tag)."*
 ([custom metrics billing](https://docs.datadoghq.com/account_management/billing/custom_metrics/)).
-endoflife.ai is a partner-built integration in the Datadog Integrations
-catalog; we have not confirmed how Datadog classifies its metrics in a
-customer account. Plan as if they may count, and check **Plan & Usage ->
-Usage** after the first run.
+It also says *"Metrics reported from accepted integrations are not counted as
+custom metrics"*, while integrations that emit potentially unlimited metrics
+may still be considered custom
+([docs.datadoghq.com/extend](https://docs.datadoghq.com/extend/)).
+endoflife.ai is a free partner integration in the Datadog Integrations
+catalog, not a Marketplace listing, and the documentation does not say which
+of these applies to a listed partner integration outside the Marketplace. We
+have not had Datadog's answer yet; we are asking them with our next listing
+update and will publish it here. Until then, plan as if the metrics may
+count, and check **Plan & Usage -> Usage** after the first run.
 
 ## Dashboard and monitors
 
