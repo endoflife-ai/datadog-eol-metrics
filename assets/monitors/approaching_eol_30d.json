@@ -3,15 +3,21 @@
   "created_at": null,
   "last_updated_at": null,
   "title": "[endoflife.ai] Product Approaching End of Life (30 days)",
-  "description": "Alerts when a tracked product is within 30 days of its published end-of-life date — the proactive upgrade window. Warning fires at 60 days. Scope the query tags to the products you actually run. Powered by endoflife.ai — https://endoflife.ai",
+  "description": "Alerts when a product you run (detected on your hosts by the stack scan or listed in EOL_PRODUCTS; tag detected:true) is within 30 days of its next scheduled end-of-life date - the proactive upgrade window. Warning fires at 60 days. When you list versions the date is that release line's. Catalog-only products never alert. Powered by endoflife.ai - https://endoflife.ai",
   "definition": {
     "name": "[endoflife.ai] {{product.name}} reaches end of life in under 30 days",
     "type": "query alert",
-    "query": "min(last_1d):min:endoflife.days_until_eol{eol_phase:approaching} by {product} < 30",
-    "message": "{{#is_alert}}\n**{{product.name}} reaches end of life in {{value}} days.**\n\nAfter the EOL date, no further security patches ship for this release line — every new CVE stays open permanently. The comfortable migration window is closing.\n\n- Dates and upgrade path: https://endoflife.ai/{{product.name}}\n- What to do: schedule the upgrade now, or evaluate extended support before the deadline.\n{{/is_alert}}\n\n{{#is_warning}}\n{{product.name}} is inside 60 days of end of life — put the migration on this quarter's plan.\n{{/is_warning}}\n\n{{#is_recovery}}\n{{product.name}} is no longer inside the approaching-EOL window (the date passed or the lifecycle changed) — check https://endoflife.ai/{{product.name}} for current status.\n{{/is_recovery}}\n\nMethodology: https://endoflife.ai/risk-score",
-    "tags": ["source:endoflife.ai", "integration:endoflife"],
+    "query": "min(last_1d):min:endoflife.days_until_eol{eol_phase:approaching,detected:true} by {product} < 30",
+    "message": "{{#is_alert}}\n**{{product.name}} reaches end of life in {{value}} days.**\n\nThis is the soonest scheduled end of life among the {{product.name}} release lines in scope: every line endoflife.ai tracks, or only the versions you listed in EOL_PRODUCTS.\n\nAfter the EOL date the vendor's regular security updates stop for this release line, so new CVEs against it can stay open. The comfortable migration window is closing.\n\n- Dates and upgrade path: https://endoflife.ai/{{product.name}}\n- What to do: schedule the upgrade now, or evaluate extended support before the deadline.\n{{/is_alert}}\n\n{{#is_warning}}\n{{product.name}} is inside 60 days of end of life — put the migration on this quarter's plan.\n{{/is_warning}}\n\n{{#is_recovery}}\n{{product.name}} is no longer inside the approaching-EOL window (the date passed or the lifecycle changed) — check https://endoflife.ai/{{product.name}} for current status.\n{{/is_recovery}}\n\nMethodology: https://endoflife.ai/risk-score",
+    "tags": [
+      "source:endoflife.ai",
+      "integration:endoflife"
+    ],
     "options": {
-      "thresholds": { "critical": 30, "warning": 60 },
+      "thresholds": {
+        "critical": 30,
+        "warning": 60
+      },
       "notify_audit": false,
       "include_tags": true,
       "new_group_delay": 60,
@@ -21,5 +27,7 @@
     },
     "priority": 3
   },
-  "tags": ["integration:endoflife"]
+  "tags": [
+    "integration:endoflife"
+  ]
 }

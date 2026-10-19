@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """
-endoflife.ai -> Datadog Stack Scan (v2 engine)
-================================================
-The base dd_push.py pushes the FULL endoflife.ai product catalog into Datadog
-as generic reference data. That's useful as a lookup table, but it doesn't
-know anything about what a given Datadog account actually runs.
+endoflife.ai -> Datadog Stack Scan
+==================================
+Reads the host inventory already sitting in your Datadog account (host tags
+and the "apps" the Datadog Agent detects) and correlates it against the
+endoflife.ai risk database. The result, endoflife.stack_risk_score, is scoped
+to what actually runs on your hosts and tagged by host name.
 
-This script closes that gap: it reads the REAL host inventory already sitting
-in a Datadog account (host tags + detected "apps"/integrations, which Datadog
-populates automatically via the Agent) and correlates it against the
-endoflife.ai risk database. The result is a metric scoped to what's actually
-running, tagged by real host name, instead of a generic 458-product firehose.
+dd_push.py uses the same detection (when DD_APP_KEY is set) to decide which
+products to send product-level metrics for, so both scripts cover the same
+software.
 
 Requires TWO Datadog credentials (the Hosts API needs both):
     setx DD_API_KEY "your-datadog-api-key"
@@ -22,6 +21,9 @@ Data collection: the only request to endoflife.ai is a GET of the public
 scores file, identified by the user agent below. Your host inventory is read
 from Datadog, matched locally, and the results are pushed only to Datadog;
 no hostnames, tags, apps or keys are sent to endoflife.ai.
+
+Series count: one endoflife.stack_risk_score series per matched host/product
+pair (a host running nginx and postgresql is two series).
 
 Usage:
     python dd_stack_scan.py            # scans your real Datadog infrastructure
@@ -46,12 +48,14 @@ DD_SITE = (os.environ.get("DD_SITE") or "datadoghq.com").strip().lower()
 HOSTS_URL = f"https://api.{DD_SITE}/api/v1/hosts"
 METRICS_URL = f"https://api.{DD_SITE}/api/v2/series"
 SCORES_URL = "https://endoflife.ai/scores.json"
+# The Hosts API returns at most 1000 hosts per call; larger fleets are paged.
+HOSTS_PAGE_SIZE = 1000
 
 # Honest user agent for the one request this script makes to endoflife.ai (the
 # public scores file), so endoflife.ai can count active installations in
 # aggregate. Host names, tags and apps read from your Datadog account are
 # matched locally and pushed only to Datadog; none of it is sent to endoflife.ai.
-EXPORTER_VERSION = "1.2.0"
+EXPORTER_VERSION = "1.3.0"
 USER_AGENT = f"endoflife-datadog-exporter-stackscan/{EXPORTER_VERSION} (+https://endoflife.ai/integrations)"
 # endoflife.ai's own sandbox job sets EOL_EXPORTER_INTERNAL=1 so its daily run
 # is counted apart from customer installations.
@@ -99,12 +103,12 @@ SAMPLE_HOSTS = [
 ]
 
 
-def fetch_scores():
+def fetch_scores(user_agent=USER_AGENT):
     print("Fetching risk scores from endoflife.ai...")
     req = urllib.request.Request(
         SCORES_URL,
         headers={
-            "User-Agent": USER_AGENT,
+            "User-Agent": user_agent,
             "Accept": "application/json",
         },
     )
@@ -112,33 +116,50 @@ def fetch_scores():
         return json.loads(response.read())
 
 
-def fetch_real_hosts():
+def fetch_hosts():
+    """Read every host from the Datadog Hosts API (paged). Raises RuntimeError
+    when DD_API_KEY or DD_APP_KEY is missing."""
     if not DD_API_KEY or not DD_APP_KEY:
+        raise RuntimeError("DD_API_KEY and DD_APP_KEY must both be set to read your hosts")
+
+    print("Fetching host inventory from your Datadog account...")
+    hosts = []
+    start = 0
+    while True:
+        query = urllib.parse.urlencode({"start": start, "count": HOSTS_PAGE_SIZE})
+        req = urllib.request.Request(
+            f"{HOSTS_URL}?{query}",
+            headers={"DD-API-KEY": DD_API_KEY, "DD-APPLICATION-KEY": DD_APP_KEY},
+        )
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read())
+
+        page = data.get("host_list", []) or []
+        for h in page:
+            tags = []
+            for source_tags in (h.get("tags_by_source") or {}).values():
+                tags.extend(source_tags)
+            hosts.append({
+                "name": h.get("host_name") or h.get("name"),
+                "tags": tags,
+                "apps": h.get("apps", []) or [],
+            })
+        start += len(page)
+        total = data.get("total_matching") or 0
+        if not page or len(page) < HOSTS_PAGE_SIZE or start >= total:
+            break
+    return hosts
+
+
+def fetch_real_hosts():
+    try:
+        return fetch_hosts()
+    except RuntimeError:
         print("ERROR: DD_API_KEY and DD_APP_KEY must both be set to scan real infrastructure.")
         print('    setx DD_API_KEY "your-datadog-api-key"')
         print('    setx DD_APP_KEY "your-datadog-application-key"')
         print("Or run with --sample to see the matching logic against synthetic hosts instead.")
         sys.exit(1)
-
-    print("Fetching host inventory from your Datadog account...")
-    req = urllib.request.Request(
-        HOSTS_URL,
-        headers={"DD-API-KEY": DD_API_KEY, "DD-APPLICATION-KEY": DD_APP_KEY},
-    )
-    with urllib.request.urlopen(req) as response:
-        data = json.loads(response.read())
-
-    hosts = []
-    for h in data.get("host_list", []):
-        tags = []
-        for source_tags in (h.get("tags_by_source") or {}).values():
-            tags.extend(source_tags)
-        hosts.append({
-            "name": h.get("host_name") or h.get("name"),
-            "tags": tags,
-            "apps": h.get("apps", []) or [],
-        })
-    return hosts
 
 
 def normalize(name):
@@ -175,7 +196,7 @@ def correlate(hosts, scores):
         for candidate in candidate_identifiers(host):
             if candidate in known_products:
                 host_matches.add(candidate)
-        for product in host_matches:
+        for product in sorted(host_matches):
             matches.append((host["name"], product, scores[product]))
 
     return matches
@@ -190,12 +211,14 @@ def build_series(matches):
             continue
         factors = data.get("factors", {}) or {}
         kev_active = "true" if (factors.get("kev", 0) or 0) > 0 else "false"
+        # No eol_date tag: a date tag starts a new series every time the date
+        # changes and no widget or monitor uses it. Days to end of life is the
+        # value of endoflife.days_until_eol (dd_push.py).
         tags = [
             f"host_name:{host_name}",
             f"product:{product}",
             f"grade:{data.get('grade', '')}",
             f"kev_active:{kev_active}",
-            f"eol_date:{data.get('eolDate') or 'none'}",
             "source:endoflife.ai-stack-scan",
         ]
         series.append({
@@ -211,18 +234,22 @@ def build_series(matches):
 def push_to_datadog(series):
     if not series:
         return 0
-    payload = json.dumps({"series": series}).encode("utf-8")
-    req = urllib.request.Request(
-        METRICS_URL,
-        data=payload,
-        headers={"Content-Type": "application/json", "DD-API-KEY": DD_API_KEY},
-        method="POST",
-    )
-    with urllib.request.urlopen(req) as response:
-        result = json.loads(response.read())
-        errors = result.get("errors", [])
-        print(f"  Pushed {len(series)} points ... {'OK' if not errors else errors}")
-    return len(series)
+    pushed = 0
+    for i in range(0, len(series), 100):
+        batch = series[i:i + 100]
+        payload = json.dumps({"series": batch}).encode("utf-8")
+        req = urllib.request.Request(
+            METRICS_URL,
+            data=payload,
+            headers={"Content-Type": "application/json", "DD-API-KEY": DD_API_KEY},
+            method="POST",
+        )
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read())
+            errors = result.get("errors", [])
+            pushed += len(batch)
+            print(f"  Pushed {pushed}/{len(series)} points ... {'OK' if not errors else errors}")
+    return pushed
 
 
 def main():
@@ -262,7 +289,7 @@ def main():
     if sample_mode:
         print("\n[--sample --push] Publishing SYNTHETIC sample-host metrics (demo/sandbox use).")
 
-    print(f"\nPushing {len(series)} stack-scoped metric points to Datadog...")
+    print(f"\nPushing {len(series)} stack-scoped metric points to Datadog ({len(series)} series)...")
     push_to_datadog(series)
     print(f"Done. Check: Metrics Explorer on your Datadog site ({DD_SITE}), query endoflife.stack_risk_score")
 
