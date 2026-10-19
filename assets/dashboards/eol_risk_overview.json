@@ -1,6 +1,6 @@
 {
   "title": "EOL Risk Overview",
-  "description": "Software end-of-life risk for your environment, powered by endoflife.ai (0-100 EOL Risk Scores, vendor-verified dates). Catalog-wide risk plus stack-scan metrics scoped to your detected hosts. Learn more: https://endoflife.ai",
+  "description": "Software end-of-life risk for the software you run, powered by endoflife.ai (0-100 EOL Risk Scores; every date labelled with its source). Products detected on your hosts or listed in EOL_PRODUCTS, plus stack-scan scores per host. Learn more: https://endoflife.ai",
   "widgets": [
     {
       "definition": {
@@ -11,7 +11,7 @@
           {
             "definition": {
               "type": "note",
-              "content": "## endoflife.ai \u2014 EOL Risk Overview\n\n**Risk Score (0\u2013100)**: EOL recency + attack surface + CISA KEV exposure + extended-support availability. Higher = more dangerous to keep running. Grades: A (low) to F (critical).\n\n**Two lenses:** catalog metrics (`endoflife.risk_score`, `endoflife.days_until_eol`) cover the full tracked catalog; **stack-scan metrics** (`endoflife.stack_risk_score`) are scoped to hosts detected in *your* Datadog account, tagged by `host_name`. `eol_phase` splits products **approaching** EOL (plan the upgrade) from **past** EOL (remediate \u2014 no patches are coming).\n\nDates verified against vendor documentation \u2014 methodology: https://endoflife.ai/accuracy",
+              "content": "## endoflife.ai — EOL Risk Overview\n\n**Risk Score (0–100)**: EOL recency + attack surface + CISA KEV exposure + extended-support availability. Higher = more dangerous to keep running. Grades: A (low) to F (critical).\n\n**Your software only:** product metrics (`endoflife.risk_score`, `endoflife.days_until_eol`) cover the products the exporter detected on your hosts or that you listed in `EOL_PRODUCTS` (tag `detected:true`, the `$detected` default); the full catalog is opt-in (`EOL_FULL_CATALOG=1`, tagged `detected:false`). **Stack-scan metrics** (`endoflife.stack_risk_score`) are per host, tagged by `host_name`. `eol_phase` splits products **approaching** EOL (plan the upgrade) from **past** EOL (remediate: regular vendor security updates have stopped).\n\nEvery date names its source: the vendor's own lifecycle page for the products endoflife.ai verifies directly, the open endoflife.date dataset for the rest. Methodology: https://endoflife.ai/accuracy",
               "background_color": "yellow",
               "font_size": "14",
               "text_align": "left",
@@ -47,7 +47,7 @@
                     {
                       "name": "query1",
                       "data_source": "metrics",
-                      "query": "min:endoflife.days_until_eol{kev_active:true,$product,$eol_phase,$grade} by {product}",
+                      "query": "min:endoflife.days_until_eol{kev_active:true,$product,$eol_phase,$grade,$detected} by {product}",
                       "aggregator": "last"
                     }
                   ],
@@ -61,7 +61,6 @@
               ],
               "autoscale": true,
               "precision": 0,
-              "custom_links": [],
               "timeseries_background": {
                 "type": "area"
               }
@@ -78,7 +77,7 @@
               "title": "Average EOL Risk Score",
               "title_size": "16",
               "title_align": "left",
-              "description": "Current average across the full catalog of 500+ monitored products.",
+              "description": "Current average across the full catalog of 600+ monitored products.",
               "type": "query_value",
               "requests": [
                 {
@@ -91,33 +90,32 @@
                     {
                       "name": "query1",
                       "data_source": "metrics",
-                      "query": "avg:endoflife.risk_score{*}",
+                      "query": "avg:endoflife.risk_score{$detected}",
                       "aggregator": "avg"
                     }
                   ],
-                  "response_format": "scalar"
+                  "response_format": "scalar",
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "value": 40,
+                      "palette": "white_on_green"
+                    },
+                    {
+                      "comparator": "<",
+                      "value": 60,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": ">=",
+                      "value": 60,
+                      "palette": "white_on_red"
+                    }
+                  ]
                 }
               ],
               "autoscale": false,
               "precision": 2,
-              "custom_unit": "",
-              "conditional_formats": [
-                {
-                  "comparator": "<",
-                  "value": 40,
-                  "palette": "white_on_green"
-                },
-                {
-                  "comparator": "<",
-                  "value": 60,
-                  "palette": "white_on_yellow"
-                },
-                {
-                  "comparator": ">=",
-                  "value": 60,
-                  "palette": "white_on_red"
-                }
-              ],
               "timeseries_background": {
                 "type": "area"
               }
@@ -142,7 +140,7 @@
                     {
                       "name": "query1",
                       "data_source": "metrics",
-                      "query": "min:endoflife.days_until_eol{eol_phase:approaching,$product,$grade}",
+                      "query": "min:endoflife.days_until_eol{eol_phase:approaching,$product,$grade,$detected}",
                       "aggregator": "last"
                     }
                   ],
@@ -222,7 +220,7 @@
     },
     {
       "definition": {
-        "title": "Stack Scan \u2014 Your Hosts",
+        "title": "Stack Scan — Your Hosts",
         "type": "group",
         "layout_type": "ordered",
         "widgets": [
@@ -285,13 +283,13 @@
     },
     {
       "definition": {
-        "title": "Lifecycle Deadlines \u2014 Approaching vs Past",
+        "title": "Lifecycle Deadlines — Approaching vs Past",
         "type": "group",
         "layout_type": "ordered",
         "widgets": [
           {
             "definition": {
-              "title": "Approaching EOL \u2014 days remaining",
+              "title": "Approaching EOL — days remaining",
               "type": "toplist",
               "requests": [
                 {
@@ -299,7 +297,7 @@
                     {
                       "name": "query1",
                       "data_source": "metrics",
-                      "query": "min:endoflife.days_until_eol{eol_phase:approaching,$product,$grade} by {product}",
+                      "query": "min:endoflife.days_until_eol{eol_phase:approaching,$product,$grade,$detected} by {product}",
                       "aggregator": "last"
                     }
                   ],
@@ -345,7 +343,7 @@
           },
           {
             "definition": {
-              "title": "Past EOL \u2014 days overdue",
+              "title": "Past EOL — days overdue",
               "type": "toplist",
               "requests": [
                 {
@@ -353,7 +351,7 @@
                     {
                       "name": "query1",
                       "data_source": "metrics",
-                      "query": "min:endoflife.days_until_eol{eol_phase:past,$product,$grade} by {product}",
+                      "query": "min:endoflife.days_until_eol{eol_phase:past,$product,$grade,$detected} by {product}",
                       "aggregator": "last"
                     }
                   ],
@@ -402,7 +400,7 @@
     },
     {
       "definition": {
-        "title": "Catalog Risk Breakdown",
+        "title": "Your Software by Risk",
         "type": "group",
         "layout_type": "ordered",
         "widgets": [
@@ -411,13 +409,13 @@
               "title": "Products by Risk Grade",
               "title_size": "16",
               "title_align": "left",
-              "description": "Share of monitored products by risk band \u2014 the widest wedges are where remediation effort concentrates.",
+              "description": "Share of monitored products by risk band — the widest wedges are where remediation effort concentrates.",
               "requests": [
                 {
                   "response_format": "scalar",
                   "queries": [
                     {
-                      "query": "count:endoflife.risk_score{*} by {grade}",
+                      "query": "count:endoflife.risk_score{$detected} by {grade}",
                       "data_source": "metrics",
                       "name": "query1",
                       "aggregator": "max"
@@ -468,7 +466,7 @@
                     {
                       "data_source": "metrics",
                       "name": "query1",
-                      "query": "max:endoflife.risk_score{grade:f} by {product}",
+                      "query": "max:endoflife.risk_score{grade:f,$detected} by {product}",
                       "aggregator": "avg"
                     }
                   ],
@@ -510,14 +508,14 @@
               "title_size": "16",
               "title_align": "left",
               "description": "How many tracked products are approaching EOL vs already past it.",
-              "type": "bar_chart",
+              "type": "toplist",
               "requests": [
                 {
                   "queries": [
                     {
                       "data_source": "metrics",
                       "name": "query1",
-                      "query": "count:endoflife.risk_score{*} by {eol_phase}",
+                      "query": "count:endoflife.risk_score{$detected} by {eol_phase}",
                       "aggregator": "max"
                     }
                   ],
@@ -574,7 +572,7 @@
                     {
                       "data_source": "metrics",
                       "name": "query1",
-                      "query": "avg:endoflife.risk_score{kev_active:true} by {product}",
+                      "query": "avg:endoflife.risk_score{kev_active:true,$detected} by {product}",
                       "aggregator": "avg"
                     }
                   ],
@@ -631,7 +629,7 @@
                     {
                       "name": "query1",
                       "data_source": "metrics",
-                      "query": "avg:endoflife.risk_score{kev_active:true} by {product}"
+                      "query": "avg:endoflife.risk_score{kev_active:true,$detected} by {product}"
                     }
                   ],
                   "formulas": [
@@ -667,7 +665,7 @@
         "widgets": [
           {
             "definition": {
-              "title": "EOL Risk by product \u2014 score, grade, KEV, phase",
+              "title": "EOL Risk by product: score, days to end of life, grade, KEV, phase",
               "type": "query_table",
               "requests": [
                 {
@@ -675,8 +673,14 @@
                     {
                       "name": "score",
                       "data_source": "metrics",
-                      "query": "max:endoflife.risk_score{$product,$eol_phase,$grade} by {product,eol_date,grade,kev_active,eol_phase}",
+                      "query": "max:endoflife.risk_score{$product,$eol_phase,$grade,$detected} by {product,grade,kev_active,eol_phase}",
                       "aggregator": "max"
+                    },
+                    {
+                      "name": "days",
+                      "data_source": "metrics",
+                      "query": "min:endoflife.days_until_eol{$product,$eol_phase,$grade,$detected} by {product,grade,kev_active,eol_phase}",
+                      "aggregator": "min"
                     }
                   ],
                   "response_format": "scalar",
@@ -699,7 +703,12 @@
                           "value": 60,
                           "palette": "white_on_green"
                         }
-                      ]
+                      ],
+                      "alias": "EOL Risk Score"
+                    },
+                    {
+                      "formula": "days",
+                      "alias": "Days until EOL (negative = past)"
                     }
                   ],
                   "sort": {
@@ -734,7 +743,7 @@
           },
           {
             "definition": {
-              "title": "Risk posture trend (30d) \u2014 average score and past-EOL count",
+              "title": "Risk posture trend (30d) — average score and past-EOL count",
               "title_size": "16",
               "title_align": "left",
               "show_legend": true,
@@ -752,7 +761,7 @@
                     {
                       "name": "query1",
                       "data_source": "metrics",
-                      "query": "avg:endoflife.risk_score{$product,$eol_phase,$grade}"
+                      "query": "avg:endoflife.risk_score{$product,$eol_phase,$grade,$detected}"
                     }
                   ],
                   "response_format": "timeseries",
@@ -774,7 +783,7 @@
                     {
                       "name": "query2",
                       "data_source": "metrics",
-                      "query": "avg:endoflife.risk_score{eol_phase:past,$product,$grade} by {product}"
+                      "query": "avg:endoflife.risk_score{eol_phase:past,$product,$grade,$detected} by {product}"
                     }
                   ],
                   "response_format": "timeseries",
@@ -788,7 +797,7 @@
                 }
               ],
               "time": {
-                "live_span": "30d"
+                "live_span": "1mo"
               }
             },
             "layout": {
@@ -820,6 +829,15 @@
       "prefix": "grade",
       "available_values": [],
       "default": "*"
+    },
+    {
+      "name": "detected",
+      "prefix": "detected",
+      "available_values": [
+        "true",
+        "false"
+      ],
+      "default": "true"
     }
   ],
   "layout_type": "ordered",
