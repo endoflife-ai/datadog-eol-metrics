@@ -8,10 +8,16 @@
     "name": "[endoflife.ai] {{host_name.name}} is running high-risk end-of-life software",
     "type": "query alert",
     "query": "max(last_1d):max:endoflife.stack_risk_score{*} by {host_name} >= 70",
-    "message": "{{#is_alert}}\n**{{host_name.name}} is running end-of-life software with an EOL Risk Score of {{value}}/100.**\n\nSomething detected on this host is past (or at) end of life with a high attack surface and/or active CISA KEV exposure — and it is in your environment right now, not just in a catalog.\n\n- Filter the EOL Risk Overview dashboard to this host for the detected products.\n- What to do: upgrade the affected software, isolate the host, or evaluate extended support.\n{{/is_alert}}\n\n{{#is_recovery}}\n{{host_name.name}} no longer has detections at 70 or above.\n{{/is_recovery}}\n\nMethodology: https://endoflife.ai/risk-score",
-    "tags": ["source:endoflife.ai", "integration:endoflife"],
+    "message": "{{#is_alert}}\n**{{host_name.name}} is running end-of-life software with an EOL Risk Score of {{value}}/100.**\n\nSoftware detected on this host scores 70 or more on endoflife.ai's EOL Risk Score (High is 51-75, Critical 76-100), and it is in your environment right now, not just in a catalog.\n\n- Filter the EOL Risk Overview dashboard to this host for the detected products.\n- What to do: upgrade the affected software, isolate the host, or evaluate extended support.\n{{/is_alert}}\n\n{{#is_recovery}}\n{{host_name.name}} no longer has detections at 70 or above.\n{{/is_recovery}}\n\nMethodology: https://endoflife.ai/risk-score",
+    "tags": [
+      "source:endoflife.ai",
+      "integration:endoflife"
+    ],
     "options": {
-      "thresholds": { "critical": 70, "warning": 50 },
+      "thresholds": {
+        "critical": 70,
+        "warning": 50
+      },
       "notify_audit": false,
       "include_tags": true,
       "new_group_delay": 60,
@@ -21,5 +27,7 @@
     },
     "priority": 2
   },
-  "tags": ["integration:endoflife"]
+  "tags": [
+    "integration:endoflife"
+  ]
 }

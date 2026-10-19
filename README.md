@@ -134,8 +134,9 @@ Usage** after the first run.
 - `assets/dashboards/eol_risk_overview.json` - the EOL Risk Overview
   dashboard. Its `$detected` template variable defaults to `true` (your
   software).
-- `assets/monitors/` - four monitor templates: critical EOL risk, approaching
-  end of life within 30 days, KEV-exposed product (these three alert only on
+- `assets/monitors/` - four monitor templates: critical EOL risk (76 or
+  above, endoflife.ai's Critical band), approaching end of life within 30
+  days, KEV-exposed product at 60 or above (these three alert only on
   `detected:true` products) and host running EOL software (Stack Risk Score of
   70 or above). The files are integration-asset wrappers: to create one in
   Datadog, open **Monitors -> New Monitor -> Import from JSON** and paste the

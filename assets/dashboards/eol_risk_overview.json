@@ -11,7 +11,7 @@
           {
             "definition": {
               "type": "note",
-              "content": "## endoflife.ai — EOL Risk Overview\n\n**Risk Score (0–100)**: EOL recency + attack surface + CISA KEV exposure + extended-support availability. Higher = more dangerous to keep running. Grades: A (low) to F (critical).\n\n**Your software only:** product metrics (`endoflife.risk_score`, `endoflife.days_until_eol`) cover the products the exporter detected on your hosts or that you listed in `EOL_PRODUCTS` (tag `detected:true`, the `$detected` default); the full catalog is opt-in (`EOL_FULL_CATALOG=1`, tagged `detected:false`). **Stack-scan metrics** (`endoflife.stack_risk_score`) are per host, tagged by `host_name`. `eol_phase` splits products **approaching** EOL (plan the upgrade) from **past** EOL (remediate: regular vendor security updates have stopped).\n\nEvery date names its source: the vendor's own lifecycle page for the products endoflife.ai verifies directly, the open endoflife.date dataset for the rest. Methodology: https://endoflife.ai/accuracy",
+              "content": "## endoflife.ai — EOL Risk Overview\n\n**Risk Score (0–100)**: EOL recency + attack surface + CISA KEV exposure + extended-support availability. Higher = more dangerous to keep running. Bands: Low 0–25, Medium 26–50, High 51–75, Critical 76–100. Letter grades: A 0–20, B 21–40, C 41–60, D 61–80, F 81–100.\n\n**Your software only:** product metrics (`endoflife.risk_score`, `endoflife.days_until_eol`) cover the products the exporter detected on your hosts or that you listed in `EOL_PRODUCTS` (tag `detected:true`, the `$detected` default); the full catalog is opt-in (`EOL_FULL_CATALOG=1`, tagged `detected:false`). **Stack-scan metrics** (`endoflife.stack_risk_score`) are per host, tagged by `host_name`. `eol_phase` splits products **approaching** EOL (plan the upgrade) from **past** EOL (remediate: regular vendor security updates have stopped).\n\nEvery date names its source: the vendor's own lifecycle page for the products endoflife.ai verifies directly, the open endoflife.date dataset for the rest. Methodology: https://endoflife.ai/accuracy",
               "background_color": "yellow",
               "font_size": "14",
               "text_align": "left",
@@ -98,17 +98,17 @@
                   "conditional_formats": [
                     {
                       "comparator": "<",
-                      "value": 40,
+                      "value": 51,
                       "palette": "white_on_green"
                     },
                     {
                       "comparator": "<",
-                      "value": 60,
+                      "value": 76,
                       "palette": "white_on_yellow"
                     },
                     {
                       "comparator": ">=",
-                      "value": 60,
+                      "value": 76,
                       "palette": "white_on_red"
                     }
                   ]
@@ -690,17 +690,17 @@
                       "conditional_formats": [
                         {
                           "comparator": ">=",
-                          "value": 80,
+                          "value": 76,
                           "palette": "white_on_red"
                         },
                         {
                           "comparator": ">=",
-                          "value": 60,
+                          "value": 51,
                           "palette": "white_on_yellow"
                         },
                         {
                           "comparator": "<",
-                          "value": 60,
+                          "value": 51,
                           "palette": "white_on_green"
                         }
                       ],

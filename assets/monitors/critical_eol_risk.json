@@ -3,20 +3,19 @@
   "created_at": null,
   "last_updated_at": null,
   "title": "[endoflife.ai] Product at Critical EOL Risk",
-  "description": "Alerts when a product you run (detected on your hosts by the stack scan or listed in EOL_PRODUCTS; tag detected:true) has an EOL Risk Score in the Critical band (>= 80), meaning it is end-of-life with a high attack surface and/or active exploitation. Catalog-only products never alert. Powered by endoflife.ai - https://endoflife.ai/risk-score",
+  "description": "Alerts when a product you run (detected on your hosts by the stack scan or listed in EOL_PRODUCTS; tag detected:true) has an EOL Risk Score in the Critical band (76-100 on endoflife.ai). Catalog-only products never alert. Powered by endoflife.ai - https://endoflife.ai/risk-score",
   "definition": {
     "name": "[endoflife.ai] Product at Critical EOL Risk: {{product.name}}",
     "type": "query alert",
-    "query": "max(last_1d):max:endoflife.risk_score{detected:true} by {product} >= 80",
-    "message": "{{#is_alert}}\n**{{product.name}} is at Critical end-of-life risk** — EOL Risk Score {{value}}/100.\n\nThis product is end-of-life and carries a high attack surface and/or active CISA KEV exposure. Running it unpatched is a material security and compliance risk.\n\n- View the score breakdown: https://endoflife.ai/{{product.name}}\n- What to do: migrate to a supported release, or evaluate extended support.\n{{/is_alert}}\n\n{{#is_recovery}}\n{{product.name}} EOL Risk Score has dropped below the Critical threshold.\n{{/is_recovery}}\n\nMethodology: https://endoflife.ai/risk-score",
+    "query": "max(last_1d):max:endoflife.risk_score{detected:true} by {product} >= 76",
+    "message": "{{#is_alert}}\n**{{product.name}} is at Critical end-of-life risk** — EOL Risk Score {{value}}/100 (Critical is 76-100).\n\nThe score combines how long its release lines have been past end of life, its attack surface, CISA KEV exposure and whether extended support exists. Running an end-of-life release unpatched is a material security and compliance risk.\n\n- View the score breakdown: https://endoflife.ai/{{product.name}}\n- What to do: migrate to a supported release, or evaluate extended support.\n{{/is_alert}}\n\n{{#is_recovery}}\n{{product.name}} EOL Risk Score has dropped below the Critical threshold.\n{{/is_recovery}}\n\nMethodology: https://endoflife.ai/risk-score",
     "tags": [
       "source:endoflife.ai",
       "integration:endoflife"
     ],
     "options": {
       "thresholds": {
-        "critical": 80,
-        "warning": 60
+        "critical": 76
       },
       "notify_audit": false,
       "include_tags": true,
