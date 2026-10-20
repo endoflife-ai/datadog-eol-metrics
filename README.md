@@ -9,7 +9,7 @@ The integration tile is in the Datadog Integrations catalog (in Datadog:
 tile's setup steps point to, plus the dashboard and monitor templates.
 Questions: partners@endoflife.ai.
 
-Data: [endoflife.ai](https://endoflife.ai) - end-of-life dates for 600+
+Data: [endoflife.ai](https://endoflife.ai) - end-of-life dates for 700+
 products, with the [EOL Risk Score](https://endoflife.ai/risk-score) (0-100).
 Every date names its source: for the products endoflife.ai verifies directly
 it is the vendor's own lifecycle page, for the rest it is the open
